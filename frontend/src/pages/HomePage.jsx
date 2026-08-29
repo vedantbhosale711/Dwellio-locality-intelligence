@@ -31,6 +31,7 @@ import {
   Database,
   Users,
 } from "lucide-react";
+
 import { Link } from "react-router-dom";
 
 function HomePage() {
@@ -148,7 +149,7 @@ function HomePage() {
 
         <div className="flex justify-between">
           <div className="text-slate-500 font-medium">
-            Popular localities loved by out users
+            Popular localities loved by our users
           </div>
           <Link to="/explore" className="text-blue-600">
             View all localities➜
