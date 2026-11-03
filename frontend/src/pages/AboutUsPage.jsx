@@ -5,7 +5,6 @@ import {
   Scale, Flag, Users, LineChart, Quote, Target
 } from "lucide-react";
 
-/* ============================== TOKENS ============================== */
 const C = {
   bg: "#F5F7FB",
   surface: "#FFFFFF",
@@ -36,7 +35,6 @@ const FONT_CSS = `
 .dwa-card:hover{ box-shadow: 0 16px 32px -18px rgba(16,24,39,0.16); transform: translateY(-2px); }
 `;
 
-/* ============================== DATA ============================== */
 const FACTORS = [
   { label: "Safety & Security", icon: ShieldCheck, color: "#DC2626", soft: "#FDE3E3" },
   { label: "Connectivity & Transport", icon: TrainFront, color: "#2563EB", soft: "#DEE9FE" },

@@ -1,11 +1,28 @@
-import React, { useState, useMemo } from "react";
-import {
-  ChevronRight, Search, Plus, X, MapPin, Users, Info, Star, ShieldCheck, TrainFront,
-  HeartPulse, GraduationCap, Sprout, ShoppingBag, Sparkles, Home, TrendingUp, RotateCcw,
-  ArrowRight, Lightbulb
-} from "lucide-react";
 
-/* ============================== TOKENS ============================== */
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Search,
+  Plus,
+  X,
+  MapPin,
+  Info,
+  Star,
+  ShieldCheck,
+  TrainFront,
+  HeartPulse,
+  GraduationCap,
+  Sprout,
+  ShoppingBag,
+  Sparkles,
+  Home,
+  TrendingUp,
+  ArrowRight,
+  Lightbulb,
+  RotateCcw,
+} from "lucide-react";
+import { searchLocalities, getLocalityDetails } from "../utils/api";
+
 const C = {
   bg: "#F5F7FB",
   surface: "#FFFFFF",
@@ -20,265 +37,243 @@ const C = {
   green: "#16A34A",
   greenSoft: "#DCFCE7",
   greenText: "#15803D",
-  purple: "#7C3AED",
-  purpleSoft: "#F1EAFE",
-  gold: "#F59E0B",
 };
 
 const FONT_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap');
-* { box-sizing: border-box; }
 .dwc-root { font-family:'Inter',-apple-system,sans-serif; background:${C.bg}; color:${C.navy}; }
 .dwc-display { font-family:'Manrope','Inter',sans-serif; letter-spacing:-0.02em; }
-.dwc-btn-primary{ background:${C.blue}; color:#fff; transition: background .15s ease; }
-.dwc-btn-primary:hover{ background:${C.blueDark}; }
-.dwc-btn-outline{ background:#fff; color:${C.blue}; border:1.3px solid ${C.blue}; transition: all .15s ease; }
-.dwc-btn-outline:hover{ background:${C.blueSoft}; }
-.dwc-card{ transition: box-shadow .2s ease, transform .2s ease; }
-.dwc-card:hover{ box-shadow: 0 16px 32px -18px rgba(16,24,39,0.16); }
-.dwc-fade{ animation: dwcFade .3s ease both; }
-@keyframes dwcFade{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+.dwc-btn-primary { background:${C.blue}; color:#fff; transition:background .15s ease; }
+.dwc-btn-primary:hover { background:${C.blueDark}; }
+.dwc-btn-primary:disabled { opacity:.55; cursor:not-allowed; }
+.dwc-card { transition:box-shadow .2s ease; }
+.dwc-card:hover { box-shadow:0 16px 32px -18px rgba(16,24,39,.16); }
 `;
 
-/* ============================== FACTOR META (order matches table) ============================== */
 const FACTORS = [
-  { key: "safety", label: "Safety & Security", icon: ShieldCheck, color: "#DC2626", soft: "#FDE3E3" },
-  { key: "connectivity", label: "Connectivity", icon: TrainFront, color: "#2563EB", soft: "#DEE9FE" },
-  { key: "healthcare", label: "Healthcare", icon: HeartPulse, color: "#DB2777", soft: "#FBE1EE" },
-  { key: "education", label: "Education", icon: GraduationCap, color: "#7C3AED", soft: "#ECE3FD" },
-  { key: "environment", label: "Environment", icon: Sprout, color: "#159C5B", soft: "#DBF5E5" },
-  { key: "amenities", label: "Amenities", icon: ShoppingBag, color: "#D97706", soft: "#FCECD2" },
-  { key: "lifestyle", label: "Lifestyle & Recreation", icon: Sparkles, color: "#0D9488", soft: "#D9F2EF" },
-  { key: "housing", label: "Housing & Affordability", icon: Home, color: "#C2740C", soft: "#FBE7CE" },
-  { key: "growth", label: "Future Growth", icon: TrendingUp, color: "#2563EB", soft: "#DEE9FE" },
+  { key: "safety", label: "Safety & Security", icon: ShieldCheck },
+  { key: "connectivity", label: "Connectivity", icon: TrainFront },
+  { key: "healthcare", label: "Healthcare", icon: HeartPulse },
+  { key: "education", label: "Education", icon: GraduationCap },
+  { key: "environment", label: "Environment", icon: Sprout },
+  { key: "amenities", label: "Amenities", icon: ShoppingBag },
+  { key: "lifestyle", label: "Lifestyle & Recreation", icon: Sparkles },
+  { key: "housing", label: "Housing & Affordability", icon: Home },
+  { key: "growth", label: "Future Growth", icon: TrendingUp },
 ];
 
-const PRIORITY_KEYS = ["connectivity", "safety", "healthcare", "environment", "lifestyle"];
-
-/* ============================== DATA ============================== */
-const ALL_LOCALITIES = [
-  { id: "kharghar", name: "Kharghar", city: "Navi Mumbai", overall: 8.9, label: "Excellent", reviews: 125,
-    safety: 8.5, connectivity: 9.1, healthcare: 8.2, education: 8.3, environment: 8.7, amenities: 9.0, lifestyle: 8.6, housing: 8.2, growth: 8.9,
-    matchTag: "Best Overall Match", matchColor: C.green, matchSoft: C.greenSoft, matchText: C.greenText,
-    matchDesc: "Great balance across all factors with strong future potential.",
-    sky: ["#BFE0FA", "#EAF6EC"], skyline: [26, 40, 30, 55, 34, 22] },
-  { id: "vashi", name: "Vashi", city: "Navi Mumbai", overall: 8.6, label: "Excellent", reviews: 98,
-    safety: 8.2, connectivity: 8.8, healthcare: 8.1, education: 8.0, environment: 8.3, amenities: 8.8, lifestyle: 8.5, housing: 8.0, growth: 8.6,
-    matchTag: "Best for Connectivity", matchColor: C.blue, matchSoft: C.blueSoft, matchText: C.blueDark,
-    matchDesc: "Excellent connectivity and amenities make it a top choice.",
-    sky: ["#BEDBF9", "#DDEFF1"], skyline: [34, 20, 46, 28, 38, 24] },
-  { id: "powai", name: "Powai", city: "Mumbai", overall: 8.4, label: "Very Good", reviews: 112,
-    safety: 8.0, connectivity: 9.0, healthcare: 7.8, education: 8.6, environment: 8.6, amenities: 8.2, lifestyle: 8.8, housing: 7.9, growth: 8.4,
-    matchTag: "Best for Lifestyle", matchColor: C.purple, matchSoft: C.purpleSoft, matchText: C.purple,
-    matchDesc: "Vibrant lifestyle with great education and green spaces.",
-    sky: ["#CFE3FB", "#E6F1E3"], skyline: [40, 24, 52, 30, 20, 44] },
-];
-
-/* ============================== PRIMITIVES ============================== */
-function CityThumb({ sky, skyline, name }) {
-  return (
-    <svg viewBox="0 0 300 170" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
-      <defs>
-        <linearGradient id={`sky-${name}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={sky[0]} /><stop offset="100%" stopColor={sky[1]} />
-        </linearGradient>
-      </defs>
-      <rect width="300" height="170" fill={`url(#sky-${name})`} />
-      <rect y="132" width="300" height="38" fill="#DCE8EE" opacity="0.7" />
-      {skyline.map((h, i) => (
-        <rect key={i} x={10 + i * 48} y={132 - h * 1.7} width="30" height={h * 1.7 + 12} fill="#7C93A8" opacity={0.55 + (i % 3) * 0.12} rx="1.5" />
-      ))}
-      <circle cx="252" cy="28" r="14" fill="#FFFFFF" opacity="0.8" />
-    </svg>
-  );
+function normalizeCategory(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[\s&/-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
-function ScoreRing({ score, size = 84 }) {
-  const r = (size - 9) / 2, cx = size / 2, cy = size / 2, circ = 2 * Math.PI * r;
-  const len = circ * (score / 10);
+function getCategoryScore(locality, key) {
+  const score = locality.scores?.find(
+    (item) => normalizeCategory(item.category) === key
+  );
+
+  if (!score || score.score === null || score.score === undefined) {
+    return null;
+  }
+
+  const value = Number(score.score);
+
+  return Number.isFinite(value) ? value : null;
+}
+
+function getOverallScore(locality) {
+  const values = FACTORS.map((factor) =>
+    getCategoryScore(locality, factor.key)
+  ).filter((score) => score !== null);
+
+  if (!values.length) return null;
+
+  return values.reduce((sum, score) => sum + score, 0) / values.length;
+}
+
+function ScoreRing({ score }) {
+  if (score === null) {
+    return (
+      <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full border-4 border-slate-100">
+        <span className="text-xl font-bold text-slate-400">—</span>
+      </div>
+    );
+  }
+
+  const radius = 32;
+  const circumference = 2 * Math.PI * radius;
+
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.borderSoft} strokeWidth="6" />
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={C.green} strokeWidth="6"
-          strokeDasharray={`${len} ${circ}`} strokeLinecap="round" transform={`rotate(-90 ${cx} ${cy})`} />
+    <div className="relative h-[76px] w-[76px] shrink-0">
+      <svg viewBox="0 0 76 76" className="h-full w-full -rotate-90">
+        <circle
+          cx="38"
+          cy="38"
+          r={radius}
+          fill="none"
+          stroke="#EFF1F5"
+          strokeWidth="6"
+        />
+        <circle
+          cx="38"
+          cy="38"
+          r={radius}
+          fill="none"
+          stroke={C.green}
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={`${circumference * Math.max(0, Math.min(10, score)) / 10} ${circumference}`}
+        />
       </svg>
+
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="dwc-display font-extrabold" style={{ fontSize: size * 0.26, color: C.navy, lineHeight: 1 }}>{score.toFixed(1)}</span>
-        <span className="text-[10px] font-semibold" style={{ color: C.textMuted }}>/10</span>
+        <span className="dwc-display text-xl font-extrabold">
+          {score.toFixed(1)}
+        </span>
+        <span className="text-[10px] text-slate-400">/ 10</span>
       </div>
     </div>
   );
 }
 
-function RatingPill({ label }) {
-  const isExcellent = label === "Excellent";
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
-      style={{ background: isExcellent ? C.greenSoft : C.blueSoft, color: isExcellent ? C.greenText : C.blueDark }}>
-      <Star size={11} fill={isExcellent ? C.greenText : C.blueDark} /> {label}
-    </span>
-  );
-}
+function SelectedCard({ locality, onRemove }) {
+  const overall = getOverallScore(locality);
 
-/* ============================== HEADER ============================== */
-function Header({ onAdd }) {
   return (
-    <div style={{ background: "linear-gradient(180deg,#EDF2FA 0%,#F5F7FB 100%)" }}>
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 pt-6 pb-8">
-        <div className="flex items-center gap-1.5 text-sm mb-4">
-          <span className="font-semibold" style={{ color: C.blue }}>Home</span>
-          <ChevronRight size={14} style={{ color: C.textMuted }} />
-          <span className="font-semibold" style={{ color: C.textSoft }}>Compare Localities</span>
+    <div className="dwc-card flex flex-col overflow-hidden rounded-2xl border bg-white"
+      style={{ borderColor: C.border }}>
+      <div className="flex items-start justify-between gap-3 p-5">
+        <div>
+          <h3 className="text-lg font-bold">{locality.name}</h3>
+
+          <p className="mt-2 flex items-start gap-1.5 text-xs text-slate-500">
+            <MapPin size={13} className="mt-0.5 shrink-0" />
+            {[locality.city, locality.state, locality.country]
+              .filter(Boolean)
+              .join(", ")}
+          </p>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-center">
-          <div>
-            <h1 className="dwc-display font-extrabold text-4xl mb-2">Compare Localities</h1>
-            <p className="text-sm mb-6" style={{ color: C.textSoft, maxWidth: 460 }}>
-              See how localities stack up across the factors that matter most to you.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex items-center gap-2 px-4 py-3 rounded-xl flex-1" style={{ background: "#fff", border: `1px solid ${C.border}` }}>
-                <Search size={16} style={{ color: C.textMuted }} />
-                <input placeholder="Search for a locality, city or area…" className="bg-transparent outline-none text-sm flex-1" style={{ color: C.navy }} />
-              </div>
-              <button onClick={onAdd} className="dwc-btn-primary inline-flex items-center justify-center gap-2 rounded-xl font-bold px-5 py-3 text-sm whitespace-nowrap">
-                <Plus size={16} /> Add Locality
-              </button>
-            </div>
-          </div>
-
-          <div className="hidden lg:block relative h-40">
-            <svg viewBox="0 0 360 160" className="w-full h-full">
-              <path d="M20,40 a6,6 0 1,1 12,0" fill="none" />
-              <circle cx="40" cy="30" r="3" fill="#8FB2EE" /><circle cx="55" cy="24" r="2.4" fill="#8FB2EE" />
-              <circle cx="70" cy="34" r="3" fill="#8FB2EE" />
-              <circle cx="34" cy="18" r="12" fill="#E1EAFB" /><circle cx="55" cy="14" r="9" fill="#E1EAFB" />
-              <rect x="60" y="90" width="30" height="70" rx="2" fill="#AFC3EA" />
-              <rect x="95" y="60" width="36" height="100" rx="2" fill="#7E9FDE" />
-              <rect x="136" y="100" width="26" height="60" rx="2" fill="#C7D6F1" />
-              <rect x="167" y="45" width="40" height="115" rx="2" fill="#6E8FD6" />
-              <rect x="212" y="85" width="28" height="75" rx="2" fill="#AFC3EA" />
-              <rect x="245" y="65" width="34" height="95" rx="2" fill="#8FA9E0" />
-              <rect x="284" y="95" width="24" height="65" rx="2" fill="#C7D6F1" />
-              <g fill="#7CAA6E">
-                <circle cx="50" cy="150" r="9" /><rect x="48" y="150" width="4" height="14" />
-                <circle cx="330" cy="145" r="9" /><rect x="328" y="145" width="4" height="14" />
-              </g>
-              <line x1="0" y1="160" x2="360" y2="160" stroke="#C7D6F1" strokeWidth="2" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ============================== SELECTED LOCALITY CARD ============================== */
-function SelectedCard({ l, onRemove }) {
-  return (
-    <div className="dwc-fade rounded-2xl border overflow-hidden flex flex-col" style={{ borderColor: C.border, background: C.surface }}>
-      <div className="h-36 relative">
-        <CityThumb sky={l.sky} skyline={l.skyline} name={l.id} />
-        <button onClick={() => onRemove(l.id)}
-          className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center"
-          style={{ background: "rgba(16,24,39,0.75)" }}>
-          <X size={13} color="#fff" />
+        <button
+          type="button"
+          onClick={() => onRemove(locality.id)}
+          aria-label={`Remove ${locality.name}`}
+          className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+        >
+          <X size={17} />
         </button>
       </div>
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="font-bold text-base">{l.name}</h3>
-          <RatingPill label={l.label} />
-        </div>
-        <div className="text-xs flex items-center gap-1 mb-3" style={{ color: C.textMuted }}><MapPin size={11} />{l.city}</div>
 
-        <div className="flex items-center gap-4">
-          <ScoreRing score={l.overall} size={72} />
-          <div>
-            <div className="text-sm font-bold">Overall Score</div>
-            <div className="text-xs" style={{ color: C.textMuted }}>Based on 9 factors</div>
-            <div className="text-xs flex items-center gap-1 mt-1" style={{ color: C.textMuted }}>
-              <Users size={12} /> {l.reviews} reviews
-            </div>
-          </div>
+      <div className="flex items-center gap-4 border-t border-slate-100 p-5">
+        <ScoreRing score={overall} />
+
+        <div>
+          <p className="font-bold">Average category score</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {locality.scores?.length || 0} stored categories
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {overall === null
+              ? "Scores not available"
+              : "Calculated from available scores"}
+          </p>
         </div>
       </div>
-      <div className="border-t py-3 text-center" style={{ borderColor: C.borderSoft }}>
-        <button onClick={() => onRemove(l.id)} className="text-sm font-bold" style={{ color: "#DC2626" }}>Remove</button>
-      </div>
+
+      <button
+        type="button"
+        onClick={() => onRemove(locality.id)}
+        className="border-t border-slate-100 py-3 text-sm font-semibold text-red-600 hover:bg-red-50"
+      >
+        Remove locality
+      </button>
     </div>
   );
 }
 
-/* ============================== FACTOR COMPARISON TABLE ============================== */
-function FactorTable({ list }) {
+function FactorTable({ localities }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: C.border, background: C.surface }}>
-      <div className="flex items-center justify-between p-5 pb-3 flex-wrap gap-3">
-        <h2 className="font-extrabold text-lg dwc-display">Factor Comparison</h2>
-        <div className="flex items-center gap-4 text-xs font-semibold" style={{ color: C.textSoft }}>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: C.green }} /> Highest Score</span>
-          <span className="flex items-center gap-1.5"><Star size={12} style={{ color: C.blue }} fill={C.blue} /> Your Priority</span>
-          <span className="flex items-center gap-1.5" style={{ color: C.textMuted }}><Info size={12} /> Based on your quiz preferences</span>
-        </div>
+    <div className="overflow-hidden rounded-2xl border bg-white"
+      style={{ borderColor: C.border }}>
+      <div className="p-5">
+        <h2 className="dwc-display text-lg font-extrabold">
+          Factor Comparison
+        </h2>
+
+        <p className="mt-1 text-xs text-slate-500">
+          Green highlights the highest available score for each factor.
+        </p>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full border-collapse text-sm">
           <thead>
-            <tr style={{ borderTop: `1px solid ${C.borderSoft}`, borderBottom: `1px solid ${C.borderSoft}` }}>
-              <th className="text-left p-4 font-bold" style={{ color: C.navy, width: 240 }}>Factor</th>
-              {list.map((l) => (
-                <th key={l.id} className="text-left p-4 font-bold">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0"><CityThumb sky={l.sky} skyline={l.skyline} name={`th-${l.id}`} /></div>
-                    <div>
-                      <div className="font-bold text-sm">{l.name}</div>
-                      <div className="text-xs font-medium" style={{ color: C.textMuted }}>{l.city}</div>
-                    </div>
+            <tr className="border-y border-slate-100">
+              <th className="min-w-48 p-4 text-left">Factor</th>
+
+              {localities.map((locality) => (
+                <th key={locality.id} className="min-w-36 p-4 text-left">
+                  <div className="font-bold">{locality.name}</div>
+                  <div className="mt-1 text-xs font-normal text-slate-400">
+                    {locality.city || locality.state || ""}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
+
           <tbody>
-            {FACTORS.map((f) => {
-              const values = list.map((l) => l[f.key]);
-              const max = Math.max(...values);
+            {FACTORS.map((factor) => {
+              const values = localities.map((locality) =>
+                getCategoryScore(locality, factor.key)
+              );
+
+              const available = values.filter((value) => value !== null);
+              const max = available.length ? Math.max(...available) : null;
+
               return (
-                <tr key={f.key} style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
-                  <td className="p-4">
-                    <span className="flex items-center gap-2.5 font-semibold" style={{ color: C.navy }}>
-                      <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: f.soft }}>
-                        <f.icon size={13} style={{ color: f.color }} />
-                      </span>
-                      {f.label}
-                      {PRIORITY_KEYS.includes(f.key) && <Star size={12} style={{ color: C.blue }} fill={C.blue} />}
-                    </span>
+                <tr key={factor.key} className="border-b border-slate-100">
+                  <td className="p-4 font-semibold">
+                    <div className="flex items-center gap-2">
+                      <factor.icon size={16} className="shrink-0 text-blue-600" />
+                      {factor.label}
+                    </div>
                   </td>
-                  {list.map((l) => {
-                    const isMax = l[f.key] === max && values.some((v) => v !== max);
+
+                  {localities.map((locality) => {
+                    const value = getCategoryScore(locality, factor.key);
+                    const isMax = value !== null && value === max;
+
                     return (
-                      <td key={l.id} className="p-4 font-bold" style={{ background: isMax ? C.greenSoft : "transparent", color: isMax ? C.greenText : C.navy }}>
-                        {l[f.key].toFixed(1)}
+                      <td
+                        key={locality.id}
+                        className="p-4 font-bold"
+                        style={{
+                          background: isMax ? C.greenSoft : "transparent",
+                          color: isMax ? C.greenText : C.navy,
+                        }}
+                      >
+                        {value === null ? "—" : value.toFixed(1)}
                       </td>
                     );
                   })}
                 </tr>
               );
             })}
-            <tr>
+
+            <tr className="bg-slate-50">
               <td className="p-4 font-extrabold">
-                Overall Score <div className="text-xs font-medium" style={{ color: C.textMuted }}>(Average)</div>
+                Average score
               </td>
-              {list.map((l) => {
-                const max = Math.max(...list.map((x) => x.overall));
-                const isMax = l.overall === max;
+
+              {localities.map((locality) => {
+                const score = getOverallScore(locality);
+
                 return (
-                  <td key={l.id} className="p-4 font-extrabold text-lg" style={{ color: isMax ? C.greenText : C.navy }}>
-                    {l.overall.toFixed(1)}
+                  <td key={locality.id} className="p-4 text-lg font-extrabold">
+                    {score === null ? "—" : score.toFixed(1)}
                   </td>
                 );
               })}
@@ -290,112 +285,380 @@ function FactorTable({ list }) {
   );
 }
 
-/* ============================== PREFERENCE MATCH SECTION ============================== */
-function MatchCard({ l, rank }) {
-  const badgeColors = [
-    { bg: C.gold, text: "#fff" },
-    { bg: "#CBD3DE", text: "#fff" },
-    { bg: "#D8C3F0", text: "#fff" },
-  ];
-  const b = badgeColors[rank - 1];
-  return (
-    <div className="dwc-card rounded-2xl border overflow-hidden relative" style={{ borderColor: C.border, background: l.matchSoft && rank === 1 ? "#F4FBF6" : C.surface }}>
-      <div className="absolute top-3 left-3 w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold z-10" style={{ background: b.bg, color: b.text }}>{rank}</div>
-      <div className="h-28"><CityThumb sky={l.sky} skyline={l.skyline} name={`match-${l.id}`} /></div>
-      <div className="p-4">
-        <h3 className="font-bold text-base mb-2">{l.name}</h3>
-        <span className="inline-block text-xs font-bold px-2.5 py-1 rounded-full mb-3" style={{ background: l.matchSoft, color: l.matchText }}>{l.matchTag}</span>
-        <p className="text-sm mb-3" style={{ color: C.textSoft }}>{l.matchDesc}</p>
-        <div className="flex items-center gap-1.5 text-sm font-bold" style={{ color: l.matchColor }}>
-          <Star size={13} fill={l.matchColor} /> {l.overall.toFixed(1)} / 10
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PrioritiesPanel() {
-  return (
-    <div className="rounded-2xl border p-5" style={{ borderColor: C.border, background: C.surface }}>
-      <h3 className="font-extrabold text-sm mb-4">Your Top Priorities</h3>
-      <div className="flex flex-col gap-3 mb-5">
-        {PRIORITY_KEYS.map((k) => {
-          const f = FACTORS.find((x) => x.key === k);
-          return (
-            <div key={k} className="flex items-center gap-2.5 text-sm font-semibold" style={{ color: C.navy }}>
-              <span className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: f.soft }}>
-                <f.icon size={13} style={{ color: f.color }} />
-              </span>
-              {f.label}
-            </div>
-          );
-        })}
-      </div>
-      <button className="dwc-btn-outline w-full inline-flex items-center justify-center gap-2 rounded-xl font-bold px-4 py-2.5 text-sm">
-        <RotateCcw size={14} /> Retake Quiz
-      </button>
-    </div>
-  );
-}
-
-/* ============================== APP ============================== */
 export default function LocalityComparisonPage() {
-  const [selectedIds, setSelectedIds] = useState(ALL_LOCALITIES.map((l) => l.id));
-  const list = useMemo(() => ALL_LOCALITIES.filter((l) => selectedIds.includes(l.id)), [selectedIds]);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  const remove = (id) => setSelectedIds((ids) => ids.filter((x) => x !== id));
-  const addBack = () => setSelectedIds(ALL_LOCALITIES.map((l) => l.id));
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [addingId, setAddingId] = useState(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const rankedMatches = useMemo(() => [...list].sort((a, b) => b.overall - a.overall), [list]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitial() {
+      const idsFromUrl = (searchParams.get("ids") || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => /^\d+$/.test(id));
+
+      if (!idsFromUrl.length) {
+        setLoadingInitial(false);
+        return;
+      }
+
+      try {
+        const results = await Promise.all(
+          [...new Set(idsFromUrl)].slice(0, 4).map(async (id) => {
+            const response = await getLocalityDetails(id);
+            return response.data;
+          })
+        );
+
+        if (!cancelled) {
+          setSelected(results.filter(Boolean));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || "Unable to load the requested localities.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingInitial(false);
+        }
+      }
+    }
+
+    loadInitial();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
+
+  async function handleSearch(event) {
+    event.preventDefault();
+
+    if (query.trim().length < 2) {
+      setError("Enter at least 2 characters to search.");
+      setResults([]);
+      return;
+    }
+
+    try {
+      setLoadingSearch(true);
+      setError("");
+      setNotice("");
+
+      const response = await searchLocalities(query.trim());
+      const found = response.data || [];
+
+      setResults(found.filter(
+        (item) => !selected.some((chosen) => String(chosen.id) === String(item.id))
+      ));
+
+      if (!found.length) {
+        setNotice("No localities found. Try another name or city.");
+      }
+    } catch (err) {
+      setError(err.message || "Search failed.");
+      setResults([]);
+    } finally {
+      setLoadingSearch(false);
+    }
+  }
+
+  async function addLocality(locality) {
+    if (selected.some((item) => String(item.id) === String(locality.id))) {
+      setNotice("This locality is already selected.");
+      return;
+    }
+
+    if (selected.length >= 4) {
+      setNotice("You can compare up to 4 localities at a time.");
+      return;
+    }
+
+    try {
+      setAddingId(locality.id);
+      setError("");
+      setNotice("");
+
+      const response = await getLocalityDetails(locality.id);
+
+      setSelected((previous) => {
+        if (previous.some((item) => String(item.id) === String(locality.id))) {
+          return previous;
+        }
+
+        if (previous.length >= 4) return previous;
+
+        return [...previous, response.data];
+      });
+
+      setResults((previous) =>
+        previous.filter((item) => String(item.id) !== String(locality.id))
+      );
+    } catch (err) {
+      setError(err.message || `Unable to load ${locality.name}.`);
+    } finally {
+      setAddingId(null);
+    }
+  }
+
+  function removeLocality(id) {
+    setSelected((previous) =>
+      previous.filter((item) => String(item.id) !== String(id))
+    );
+  }
+
+  const ranked = useMemo(() => {
+    return [...selected].sort((a, b) => {
+      const scoreA = getOverallScore(a);
+      const scoreB = getOverallScore(b);
+
+      if (scoreA === null) return scoreB === null ? 0 : 1;
+      if (scoreB === null) return -1;
+
+      return scoreB - scoreA;
+    });
+  }, [selected]);
 
   return (
     <div className="dwc-root min-h-screen pb-14">
       <style dangerouslySetInnerHTML={{ __html: FONT_CSS }} />
-      <Header onAdd={addBack} />
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 -mt-2">
-        {list.length === 0 ? (
-          <div className="rounded-2xl border p-14 text-center mb-6" style={{ borderColor: C.border, background: C.surface }}>
-            <p className="text-sm font-semibold mb-4" style={{ color: C.textSoft }}>No localities selected for comparison.</p>
-            <button onClick={addBack} className="dwc-btn-primary inline-flex items-center gap-2 rounded-xl font-bold px-5 py-2.5 text-sm">
-              <Plus size={15} /> Add Localities
+      <header className="bg-gradient-to-b from-blue-50 to-slate-100">
+        <div className="mx-auto max-w-7xl px-5 pb-8 pt-7 sm:px-8 lg:px-10">
+          <div className="mb-5 flex items-center gap-2 text-sm">
+            <button onClick={() => navigate("/")} className="text-blue-600">
+              Home
             </button>
+            <ArrowRight size={13} className="text-slate-400" />
+            <span className="font-semibold text-slate-600">
+              Compare Localities
+            </span>
           </div>
-        ) : (
-          <>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
-              {list.map((l) => <SelectedCard key={l.id} l={l} onRemove={remove} />)}
+
+          <h1 className="dwc-display text-3xl font-extrabold sm:text-4xl">
+            Compare Localities
+          </h1>
+
+          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">
+            Compare localities using the scores and metrics stored in Dwellio.
+            Select up to four places to see how they differ.
+          </p>
+
+          <form
+            onSubmit={handleSearch}
+            className="mt-6 flex max-w-2xl flex-col gap-3 sm:flex-row"
+          >
+            <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3">
+              <Search size={17} className="shrink-0 text-slate-400" />
+
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search localities, cities or areas..."
+                className="w-full bg-transparent text-sm outline-none"
+              />
             </div>
 
-            <div className="flex items-center gap-2.5 rounded-xl px-4 py-3 mb-6 text-sm font-medium" style={{ background: C.blueSoft, color: C.blueDark }}>
-              <Info size={15} /> Scores are calculated on a scale of 1 to 10
-            </div>
+            <button
+              type="submit"
+              disabled={loadingSearch}
+              className="dwc-btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
+            >
+              <Search size={15} />
+              {loadingSearch ? "Searching..." : "Search"}
+            </button>
+          </form>
+        </div>
+      </header>
 
-            <div className="mb-10"><FactorTable list={list} /></div>
-
-            <section className="mb-8">
-              <h2 className="dwc-display font-extrabold text-xl mb-1">How do these localities match your preferences?</h2>
-              <p className="text-sm mb-5" style={{ color: C.textSoft }}>Based on your quiz, here's how each locality performs for you.</p>
-
-              <div className="grid lg:grid-cols-[1fr_280px] gap-6">
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {rankedMatches.map((l, i) => <MatchCard key={l.id} l={l} rank={i + 1} />)}
-                </div>
-                <PrioritiesPanel />
-              </div>
-            </section>
-          </>
+      <main className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+        {error && (
+          <div className="my-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
         )}
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl px-5 py-4" style={{ background: C.blueSoft }}>
-          <span className="flex items-center gap-2 text-sm font-medium" style={{ color: C.blueDark }}>
-            <Lightbulb size={15} /> Tip: Click on "View Details" in the Explore page to see more insights about any locality.
-          </span>
-          <button className="dwc-btn-outline inline-flex items-center gap-1.5 rounded-xl font-bold px-4 py-2 text-sm whitespace-nowrap">
-            Explore More Localities <ArrowRight size={14} />
+        {notice && (
+          <div className="my-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
+            {notice}
+          </div>
+        )}
+
+        {results.length > 0 && (
+          <section className="mb-8 mt-6 rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 className="mb-4 font-bold">Search Results</h2>
+
+            <div className="divide-y divide-slate-100">
+              {results.map((locality) => (
+                <div
+                  key={locality.id}
+                  className="flex flex-col justify-between gap-3 py-4 sm:flex-row sm:items-center"
+                >
+                  <div>
+                    <p className="font-semibold">{locality.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {[locality.city, locality.state, locality.country]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => addLocality(locality)}
+                    disabled={addingId !== null || selected.length >= 4}
+                    className="dwc-btn-primary inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
+                  >
+                    <Plus size={15} />
+                    {addingId === locality.id ? "Adding..." : "Add to Compare"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="mt-7">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="dwc-display text-xl font-extrabold">
+                Selected Localities
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {selected.length} of 4 selected
+              </p>
+            </div>
+
+            {selected.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelected([])}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                <RotateCcw size={14} />
+                Clear All
+              </button>
+            )}
+          </div>
+
+          {loadingInitial ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+              Loading selected localities...
+            </div>
+          ) : selected.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center">
+              <MapPin size={28} className="mx-auto mb-3 text-slate-400" />
+              <h3 className="font-bold">Start comparing localities</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+                Search for a place above and add it to your comparison.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {selected.map((locality) => (
+                  <SelectedCard
+                    key={locality.id}
+                    locality={locality}
+                    onRemove={removeLocality}
+                  />
+                ))}
+              </div>
+
+              <div className="mb-6 flex items-start gap-3 rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
+                <Info size={17} className="mt-0.5 shrink-0" />
+                <p>
+                  Scores come from your database. A dash means no score is
+                  available for that category. Average scores use only
+                  categories with available scores.
+                </p>
+              </div>
+
+              <div className="mb-10">
+                <FactorTable localities={selected} />
+              </div>
+
+              <section className="mb-10">
+                <h2 className="dwc-display mb-2 text-xl font-extrabold">
+                  Score Ranking
+                </h2>
+                <p className="mb-5 text-sm text-slate-500">
+                  Ranked by the average of available category scores. This is
+                  not a preference-based recommendation.
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {ranked.map((locality, index) => {
+                    const score = getOverallScore(locality);
+
+                    return (
+                      <div
+                        key={locality.id}
+                        className="rounded-xl border border-slate-200 bg-white p-5"
+                      >
+                        <div className="mb-4 flex items-center justify-between">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-sm font-extrabold text-blue-700">
+                            {score === null ? "—" : `#${index + 1}`}
+                          </span>
+                          <Star size={16} className="text-amber-500" />
+                        </div>
+
+                        <h3 className="font-bold">{locality.name}</h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {[locality.city, locality.state]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+
+                        <p className="dwc-display mt-4 text-2xl font-extrabold">
+                          {score === null ? "N/A" : score.toFixed(1)}
+                          {score !== null && (
+                            <span className="ml-1 text-xs font-medium text-slate-400">
+                              / 10
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            </>
+          )}
+        </section>
+
+        <div className="flex flex-col items-start justify-between gap-4 rounded-xl bg-blue-50 p-5 sm:flex-row sm:items-center">
+          <div className="flex items-start gap-3">
+            <Lightbulb size={18} className="mt-0.5 shrink-0 text-blue-700" />
+            <div>
+              <p className="text-sm font-semibold text-blue-900">
+                Want to explore more localities?
+              </p>
+              <p className="mt-1 text-xs text-blue-700">
+                Search for another place or return to Explore.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/explore")}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+          >
+            Explore Localities <ArrowRight size={15} />
           </button>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

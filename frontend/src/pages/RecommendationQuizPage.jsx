@@ -1,3 +1,6 @@
+
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Clock,
   ListChecks,
@@ -12,137 +15,356 @@ import {
   GraduationCap,
   Trees,
   ShoppingBasket,
-  UtensilsCrossed,
-  Wallet,
-  Scale,
-  CircleHelp,
-  Check,
-  Bus,
-  Car,
-  Footprints,
-  Shuffle,
   Building2,
-  PartyPopper,
-  Pill,
-  Hospital,
-  HeartPulse,
-  Snowflake,
-  CloudSun,
-  Sun,
-  ThermometerSnowflake,
-  SunMedium,
-  Dumbbell,
-  ShoppingBag,
-  CircleMinus,
-  Key,
-  Home,
-  Users,
-  Search,
+  Check,
+  RefreshCw,
+  Map,
+  Globe,
 } from "lucide-react";
 
 import CategoryCard from "../components/QuizPageComponents/CategoryCard";
 import quizQuestions from "../data/quizQuestions";
 
-import { useState } from "react";
+const factors = [
+  "safety",
+  "connectivity",
+  "healthcare",
+  "education",
+  "environment",
+  "amenities",
+  "lifestyle",
+  "housing",
+  "growth",
+];
+
+const factorInfo = {
+  safety: { title: "Safety & Security", icon: ShieldCheck, maxScore: 26 },
+  connectivity: {
+    title: "Connectivity & Transportation",
+    icon: TrainFront,
+    maxScore: 35,
+  },
+  healthcare: { title: "Healthcare", icon: Stethoscope, maxScore: 25 },
+  education: { title: "Education", icon: GraduationCap, maxScore: 21 },
+  environment: {
+    title: "Environment & Sustainability",
+    icon: Trees,
+    maxScore: 38,
+  },
+  amenities: {
+    title: "Amenities & Daily Convenience",
+    icon: ShoppingBasket,
+    maxScore: 45,
+  },
+  lifestyle: { title: "Lifestyle & Recreation", icon: Sparkles, maxScore: 39 },
+  housing: { title: "Housing & Affordability", icon: Building2, maxScore: 21 },
+  growth: { title: "Future Growth & Development", icon: TrendingUp, maxScore: 20 },
+};
+
+const indianStates = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Puducherry",
+];
+
+const initialLocationPreference = {
+  scope: "state",
+  state: "Maharashtra",
+  city: "",
+};
+
+function calculateFactorScores(answersByQuestion) {
+  const scores = Object.fromEntries(
+    factors.map((factor) => [factor, 0])
+  );
+
+  Object.entries(answersByQuestion).forEach(([questionId, answers]) => {
+    const weight = Number(questionId) === 1 ? 2 : 1;
+
+    answers.forEach((option) => {
+      Object.entries(option.factorImpact || {}).forEach(
+        ([factor, impact]) => {
+          if (Object.hasOwn(scores, factor)) {
+            scores[factor] += Number(impact || 0) * weight;
+          }
+        }
+      );
+    });
+  });
+
+  return scores;
+}
+
+function getPercentage(score, maxScore) {
+  if (!maxScore || maxScore <= 0) return 0;
+  return Math.max(0, Math.min(100, (score / maxScore) * 100));
+}
+
+function getImportance(percentage) {
+  if (percentage >= 80) return "Very High";
+  if (percentage >= 60) return "High";
+  if (percentage >= 35) return "Medium";
+  return "Low";
+}
 
 function IntroScreen({ setPhase }) {
   return (
-    <div className="p-20 flex flex-col justify-center items-center bg-[#F5F5F5]">
-      <div className="flex justify-center items-center text-[12px] font-bold text-indigo-700 bg-blue-100 px-3 py-1 rounded-full">
-        <Sparkles size={12} />
+    <div className="flex flex-col items-center justify-center bg-[#F5F5F5] p-8 md:p-20">
+      <div className="flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-indigo-700">
+        <Sparkles size={14} />
         Personalized recommendations
       </div>
 
-      <div className="text-2xl font-bold my-5">Find Your Ideal Locality</div>
+      <h1 className="my-5 text-center text-2xl font-bold">
+        Find Your Ideal Locality
+      </h1>
 
-      <div className="max-w-130 text-[13px] font-medium text-gray-500 text-center mb-3">
-        Answer a few quick questionNos about your lifestyle and priorities.
-        Dwellio will understand what matters most to you and recommend the
-        localities that fit your life best.
-      </div>
+      <p className="mb-4 max-w-xl text-center text-sm font-medium text-gray-500">
+        Answer a few quick questions about your preferred location,
+        lifestyle, and priorities. Dwellio will help you discover
+        localities that fit your needs.
+      </p>
 
-      <div className="flex items-center justify-center gap-4 text-xs font-medium text-gray-500">
-        <div className=" flex justify-center items-center gap-2">
-          <Clock size={12} />
-          Takes 3-4 minutes{" "}
+      <div className="mb-6 flex flex-wrap items-center justify-center gap-4 text-xs font-medium text-gray-500">
+        <div className="flex items-center gap-2">
+          <Clock size={14} />
+          Takes 3–4 minutes
         </div>
-        <div className=" flex justify-center items-center gap-2">
-          <ListChecks size={12} />9 core factors analyzed
+        <div className="flex items-center gap-2">
+          <ListChecks size={14} />
+          9 core factors analyzed
         </div>
       </div>
 
       <button
-        className="m-5 bg-blue-500 text-white rounded-xl px-4 py-2"
-        onClick={() => {
-          setPhase("quiz");
-        }}
+        type="button"
+        onClick={() => setPhase("location")}
+        className="mb-8 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
       >
-        start quiz
+        Start Quiz
       </button>
 
-      <div className="grid grid-cols-3 gap-4">
-        <CategoryCard
-          title="Safety"
-          icon={ShieldCheck}
-          iconColor="text-red-500"
-          bgColor="bg-red-100"
-        />
+      <div className="grid w-full max-w-2xl grid-cols-2 gap-4 md:grid-cols-3">
+        <CategoryCard title="Safety" icon={ShieldCheck} iconColor="text-red-500" bgColor="bg-red-100" />
+        <CategoryCard title="Connectivity" icon={MapPin} iconColor="text-blue-500" bgColor="bg-blue-100" />
+        <CategoryCard title="Healthcare" icon={Stethoscope} iconColor="text-pink-500" bgColor="bg-pink-100" />
+        <CategoryCard title="Education" icon={GraduationCap} iconColor="text-purple-500" bgColor="bg-purple-100" />
+        <CategoryCard title="Environment" icon={Trees} iconColor="text-emerald-500" bgColor="bg-emerald-100" />
+        <CategoryCard title="Amenities" icon={ShoppingBasket} iconColor="text-orange-500" bgColor="bg-orange-100" />
+        <CategoryCard title="Lifestyle" icon={Sparkles} iconColor="text-cyan-500" bgColor="bg-cyan-100" />
+        <CategoryCard title="Housing" icon={Building2} iconColor="text-amber-500" bgColor="bg-amber-100" />
+        <CategoryCard title="Future Growth" icon={TrendingUp} iconColor="text-indigo-500" bgColor="bg-indigo-100" />
+      </div>
+    </div>
+  );
+}
 
-        <CategoryCard
-          title="Connectivity"
-          icon={MapPin}
-          iconColor="text-blue-500"
-          bgColor="bg-blue-100"
-        />
+function LocationPreferenceScreen({
+  preference,
+  setPreference,
+  onContinue,
+  onBack,
+}) {
+  const [cityError, setCityError] = useState("");
 
-        <CategoryCard
-          title="Healthcare"
-          icon={Stethoscope}
-          iconColor="text-pink-500"
-          bgColor="bg-pink-100"
-        />
+  function updatePreference(updates) {
+    setPreference((previous) => ({ ...previous, ...updates }));
+    setCityError("");
+  }
 
-        <CategoryCard
-          title="Education"
-          icon={GraduationCap}
-          iconColor="text-purple-500"
-          bgColor="bg-purple-100"
-        />
+  function handleContinue() {
+    if (
+      preference.scope === "city" &&
+      !preference.city.trim()
+    ) {
+      setCityError("Please enter the city where you want to live.");
+      return;
+    }
 
-        <CategoryCard
-          title="Environment"
-          icon={Trees}
-          iconColor="text-emerald-500"
-          bgColor="bg-emerald-100"
-        />
+    onContinue();
+  }
 
-        <CategoryCard
-          title="Amenities"
-          icon={ShoppingBasket}
-          iconColor="text-orange-500"
-          bgColor="bg-orange-100"
-        />
+  const radioOptions = [
+    {
+      value: "city",
+      label: "A specific city",
+      description: "Find localities within one city.",
+      icon: MapPin,
+    },
+    {
+      value: "state",
+      label: "Anywhere in a particular state",
+      description: "Explore cities across your preferred state.",
+      icon: Map,
+    },
+    {
+      value: "india",
+      label: "Anywhere in India",
+      description: "Explore matching localities across India.",
+      icon: Globe,
+    },
+  ];
 
-        <CategoryCard
-          title="Lifestyle"
-          icon={Sparkles}
-          iconColor="text-cyan-500"
-          bgColor="bg-cyan-100"
-        />
+  return (
+    <div className="min-h-[70vh] bg-gray-50 px-5 py-10 md:px-10">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+          <MapPin size={24} />
+        </div>
 
-        <CategoryCard
-          title="Housing"
-          icon={Building2}
-          iconColor="text-amber-500"
-          bgColor="bg-amber-100"
-        />
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-blue-700">
+          Location preference
+        </p>
 
-        <CategoryCard
-          title="Future Growth"
-          icon={TrendingUp}
-          iconColor="text-indigo-500"
-          bgColor="bg-indigo-100"
-        />
+        <h1 className="text-2xl font-bold text-gray-900">
+          Where would you like to live?
+        </h1>
+
+        <p className="mt-2 text-sm leading-6 text-gray-500">
+          Choose the geographic area where you want Dwellio to find localities.
+          We'll use this to filter recommendations before ranking them.
+        </p>
+
+        <div className="mt-6 flex flex-col gap-3">
+          {radioOptions.map((option) => {
+            const Icon = option.icon;
+            const selected = preference.scope === option.value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => updatePreference({ scope: option.value })}
+                aria-pressed={selected}
+                className={`flex items-start gap-3 rounded-xl border p-4 text-left transition ${
+                  selected
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-blue-300"
+                }`}
+              >
+                <span
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                    selected
+                      ? "border-blue-600 bg-blue-600 text-white"
+                      : "border-gray-400"
+                  }`}
+                >
+                  {selected && <Check size={13} />}
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2 font-semibold text-gray-900">
+                    <Icon size={17} />
+                    {option.label}
+                  </span>
+                  <span className="mt-1 block text-sm text-gray-500">
+                    {option.description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {preference.scope === "state" && (
+          <div className="mt-6">
+            <label
+              htmlFor="preferred-state"
+              className="mb-2 block text-sm font-semibold text-gray-700"
+            >
+              Preferred state
+            </label>
+
+            <select
+              id="preferred-state"
+              value={preference.state}
+              onChange={(event) =>
+                updatePreference({ state: event.target.value })
+              }
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            >
+              {indianStates.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {preference.scope === "city" && (
+          <div className="mt-6">
+            <label
+              htmlFor="preferred-city"
+              className="mb-2 block text-sm font-semibold text-gray-700"
+            >
+              Preferred city
+            </label>
+
+            <input
+              id="preferred-city"
+              value={preference.city}
+              onChange={(event) =>
+                updatePreference({ city: event.target.value })
+              }
+              placeholder="e.g. Mumbai, Pune, Chennai"
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+
+            {cityError && (
+              <p className="mt-2 text-sm text-red-600">{cityError}</p>
+            )}
+          </div>
+        )}
+
+        <div className="mt-8 flex justify-between gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            <ArrowLeft size={16} />
+            Back
+          </button>
+
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Continue to questions
+            <ArrowRight size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -150,401 +372,394 @@ function IntroScreen({ setPhase }) {
 
 function QuizScreen({
   setPhase,
+  answersByQuestion,
+  setAnswersByQuestion,
   factorScore,
-  setFactorScore,
-  maxFactorScores,
 }) {
   const [questionNo, setQuestionNo] = useState(1);
-  const totalQuestions = quizQuestions.length;
 
-  const [selectedOptions, setSelectedOptions] = useState([]);
+  const totalQuestions = quizQuestions.length;
+  const currentQuestion = quizQuestions[questionNo - 1];
+  const selectedOptions = answersByQuestion[currentQuestion.id] || [];
+  const progress = (questionNo / totalQuestions) * 100;
+
+  function handleOptionSelection(option) {
+    setAnswersByQuestion((previous) => {
+      const currentAnswers = previous[currentQuestion.id] || [];
+      let nextAnswers;
+
+      if (currentQuestion.type === "single") {
+        const alreadySelected = currentAnswers.some(
+          (item) => item.id === option.id
+        );
+
+        nextAnswers = alreadySelected ? currentAnswers : [option];
+      } else {
+        const alreadySelected = currentAnswers.some(
+          (item) => item.id === option.id
+        );
+
+        if (alreadySelected) {
+          nextAnswers = currentAnswers.filter(
+            (item) => item.id !== option.id
+          );
+        } else {
+          const maxSelections = currentQuestion.maxSelections ?? Infinity;
+
+          if (currentAnswers.length >= maxSelections) {
+            return previous;
+          }
+
+          nextAnswers = [...currentAnswers, option];
+        }
+      }
+
+      return {
+        ...previous,
+        [currentQuestion.id]: nextAnswers,
+      };
+    });
+  }
 
   function goBack() {
     if (questionNo === 1) {
-      setPhase("intro");
+      setPhase("location");
       return;
     }
-    setQuestionNo((q) => q - 1);
+
+    setQuestionNo((previous) => previous - 1);
   }
+
   function goForward() {
     if (questionNo === totalQuestions) {
       setPhase("review");
-
       return;
     }
 
-    setQuestionNo((q) => q + 1);
-  }
-  function handleOptionSelection(o) {
-    const currentQuestion = quizQuestions[questionNo - 1];
-
-    // SINGLE SELECT
-    if (currentQuestion.type === "single") {
-      // If clicking the already selected option, do nothing
-      if (selectedOptions.includes(o)) {
-        return;
-      }
-
-      // Remove score of previous selection
-      if (selectedOptions.length > 0) {
-        const oldOption = selectedOptions[0];
-
-        setFactorScore((prev) => {
-          const updated = { ...prev };
-
-          Object.entries(oldOption.factorImpact).forEach(([factor, score]) => {
-            updated[factor] -= score;
-          });
-
-          return updated;
-        });
-      }
-
-      // Replace selected option
-      setSelectedOptions([o]);
-
-      // Add new score
-      setFactorScore((prev) => {
-        const updated = { ...prev };
-
-        Object.entries(o.factorImpact).forEach(([factor, score]) => {
-          updated[factor] += score;
-        });
-
-        return updated;
-      });
-
-      return;
-    }
-
-    // MULTIPLE SELECT
-    if (selectedOptions.includes(o)) {
-      setSelectedOptions((prev) => prev.filter((item) => item !== o));
-
-      setFactorScore((prev) => {
-        const updated = { ...prev };
-
-        Object.entries(o.factorImpact).forEach(([factor, score]) => {
-          updated[factor] -= score;
-        });
-
-        return updated;
-      });
-
-      return;
-    }
-
-    // Add multi-select option
-    if (selectedOptions.length < currentQuestion.maxSelections) {
-      setSelectedOptions((prev) => [...prev, o]);
-
-      setFactorScore((prev) => {
-        const updated = { ...prev };
-
-        Object.entries(o.factorImpact).forEach(([factor, score]) => {
-          updated[factor] += score;
-        });
-
-        return updated;
-      });
-    }
+    setQuestionNo((previous) => previous + 1);
   }
 
   return (
-    <div className="px-20  bg-gray-100 p-10 flex flex-col gap-3">
-      {/* Heading */}
+    <div className="flex flex-col gap-5 bg-gray-100 p-5 md:p-10 lg:px-20">
       <div className="flex justify-between">
-        <div className="text-blue-700 text-xs font-bold">
-          Question {questionNo} out of {totalQuestions}
-        </div>
-        <div className="text-gray-400 text-xs font-bold">
-          {Math.floor(100 * (questionNo / totalQuestions))}% complete
-        </div>
+        <span className="text-xs font-bold text-blue-700">
+          Question {questionNo} of {totalQuestions}
+        </span>
+        <span className="text-xs font-bold text-gray-500">
+          {Math.floor(progress)}% complete
+        </span>
       </div>
-      <div className="bg-gray-300 h-2 rounded-full overflow-hidden">
+
+      <div className="h-2 overflow-hidden rounded-full bg-gray-300">
         <div
-          className="bg-blue-700 h-10 "
-          style={{ width: `${(questionNo / totalQuestions) * 100}%` }}
-        ></div>
+          className="h-full rounded-full bg-blue-700 transition-all"
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
-      {/* Questions */}
-      <div>
-        <div className="text-lg font-semibold ">
-          {quizQuestions[questionNo - 1].question}
-        </div>
+      <section>
+        <h2 className="text-lg font-semibold text-gray-900">
+          {currentQuestion.question}
+        </h2>
 
-        {quizQuestions[questionNo - 1].questionSubtext && (
-          <div className="text-sm text-gray-500 ">
-            {quizQuestions[questionNo - 1].questionSubtext}
-          </div>
+        {currentQuestion.questionSubtext && (
+          <p className="mt-2 text-sm text-gray-500">
+            {currentQuestion.questionSubtext}
+          </p>
         )}
 
-        {quizQuestions[questionNo - 1].optionsList.map((o) => {
-          const Icon = o.icon;
-          const isSelected = selectedOptions.includes(o);
-          return (
-            <div
-              className={`text-gray-800 text-sm font-semibold my-3 h-16 rounded-xl flex flex-col justify-center px-4 border
-                        ${
-                          isSelected
-                            ? "bg-blue-100 border-blue-500"
-                            : "bg-white border-gray-200"
-                        }`}
-              onClick={() => handleOptionSelection(o)}
-            >
-              <Icon size={16} />
-              {o.option}
-            </div>
-          );
-        })}
-      </div>
+        <div className="mt-4 flex flex-col gap-3">
+          {currentQuestion.optionsList.map((option, index) => {
+            const Icon = option.icon;
+            const isSelected = selectedOptions.some(
+              (item) => item.id === option.id
+            );
 
-      <div className="flex  justify-between">
+            return (
+              <button
+                key={`${currentQuestion.id}-${option.id ?? index}`}
+                type="button"
+                onClick={() => handleOptionSelection(option)}
+                aria-pressed={isSelected}
+                className={`flex min-h-16 items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                  isSelected
+                    ? "border-blue-500 bg-blue-100 text-blue-900"
+                    : "border-gray-200 bg-white text-gray-800 hover:border-blue-300"
+                }`}
+              >
+                {Icon && <Icon size={18} className="shrink-0" />}
+                <span>{option.option}</span>
+                {isSelected && (
+                  <Check size={18} className="ml-auto shrink-0 text-blue-700" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="flex justify-between">
         <button
+          type="button"
           onClick={goBack}
-          className="flex justify-center items-center gap-2 bg-white rounded-lg px-4 py-2 border` border-gray-300"
+          className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50"
         >
           <ArrowLeft size={16} />
-          <div>Back</div>
+          Back
         </button>
 
         <button
+          type="button"
           onClick={goForward}
-          className="flex justify-center items-center bg-blue-600 px-4 py-2  text-white rounded-lg"
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
         >
-          <div>Continue</div>
+          {questionNo === totalQuestions ? "Review Priorities" : "Continue"}
           <ArrowRight size={16} />
         </button>
       </div>
 
-      <div className="bg-white rounded-xl px-4 py-2">
-        <div className="flex  items-center gap-2">
-          <Sparkles size={12} className="text-blue-700" />
-          <div className="text-md font-semibold text-shadow-gray-800">
-            {" "}
-            Your Priorities
-          </div>
-        </div>
-        <div className="text-xs text-gray-500 ">Updates as you answer</div>
-
-        <div className="flex flex-col gap-3 mt-3">
-          {Object.entries(factorScore)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 3)
-            .map(([factor, score]) => {
-              const percentage = (score / maxFactorScores[factor]) * 100;
-
-              return (
-                <div key={factor}>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="text-sm font-medium text-gray-700">
-                      {factor}
-                    </div>
-
-                    <div className="text-xs font-medium text-gray-500">
-                      {score}
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
-                    <div
-                      className="bg-blue-600 h-full rounded-full"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-      </div>
+      <PriorityPanel factorScore={factorScore} />
     </div>
   );
 }
 
-function ReviewScreen({ setPhase, maxFactorScores, factorScore }) {
-    function ReviewImportanceCard({ factorScore, maxScore, icon: Icon, factorTitle }) {
-        const percentage = (factorScore / maxScore) * 100;
+function PriorityPanel({ factorScore }) {
+  const topFactors = Object.entries(factorScore)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
 
-        const importance =
-            percentage >= 80 ? "Very High" :
-            percentage >= 60 ? "High" :
-            percentage >= 35 ? "Medium" : "Low";
-
-        return (
-            <div className="w-full bg-white border border-gray-200 rounded-2xl p-6 mb-4">
-
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <Icon size={20} />
-                        </div>
-
-                        <span className="font-semibold text-gray-800">
-                            {factorTitle}
-                        </span>
-                    </div>
-
-                    <span className="font-semibold text-gray-600">
-                        {importance}
-                    </span>
-                </div>
-
-                <div className="flex justify-between mt-4 mb-2 text-sm font-semibold">
-                    <span className="text-gray-400">Importance</span>
-                    <span className="text-gray-600">{importance}</span>
-                </div>
-
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                        className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                        style={{ width: `${percentage}%` }}
-                    />
-                </div>
-
-            </div>
-        );
-
-    }
-
-  const factorInfo = {
-    safety: {
-      title: "Safety & Security",
-      icon: ShieldCheck,
-      maxScore: 26,
-    },
-
-    connectivity: {
-      title: "Connectivity & Transportation",
-      icon: TrainFront,
-      maxScore: 35,
-    },
-
-    healthcare: {
-      title: "Healthcare",
-      icon: Stethoscope,
-      maxScore: 25,
-    },
-
-    education: {
-      title: "Education",
-      icon: GraduationCap,
-      maxScore: 21,
-    },
-
-    environment: {
-      title: "Environment & Sustainability",
-      icon: Trees,
-      maxScore: 38,
-    },
-
-    amenities: {
-      title: "Amenities & Daily Convenience",
-      icon: ShoppingBasket,
-      maxScore: 45,
-    },
-
-    lifestyle: {
-      title: "Lifestyle & Recreation",
-      icon: Sparkles,
-      maxScore: 39,
-    },
-
-    housing: {
-      title: "Housing & Affordability",
-      icon: Building2,
-      maxScore: 21,
-    },
-
-    growth: {
-      title: "Future Growth & Development",
-      icon: TrendingUp,
-      maxScore: 20,
-    },
-  };
+  const maxPriority = Math.max(1, ...Object.values(factorScore));
 
   return (
-    <div className="flex flex-col justify-center items-center mx-20 my-10">
-      <div className="flex justify-center gap-2 items-center text-[10px] font-bold text-emerald-600 bg-green-100 px-2 py-1 rounded-xl">
-        <div>Quiz Complete</div>
-        <Check size={12} />
+    <section className="rounded-xl bg-white p-5">
+      <div className="flex items-center gap-2">
+        <Sparkles size={16} className="text-blue-700" />
+        <h3 className="font-semibold text-gray-900">Your Priorities</h3>
       </div>
 
-      <div className="flex flex-col justify-center items-center gap-1 m-3">
-        <div className="text-2xl font-semibold ">
-          Here's What Matters Most to You
+      <p className="mt-1 text-xs text-gray-500">
+        Updates as you answer. Your first answer carries extra weight,
+        while later answers can change your ranking.
+      </p>
+
+      <div className="mt-4 flex flex-col gap-4">
+        {topFactors.map(([factor, score]) => {
+          const info = factorInfo[factor];
+          const percentage = Math.max(
+            0,
+            Math.min(100, (score / maxPriority) * 100)
+          );
+
+          return (
+            <div key={factor}>
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-gray-700">
+                  {info.title}
+                </span>
+                <span className="text-xs font-medium text-gray-500">
+                  {score} pts
+                </span>
+              </div>
+
+              <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-blue-600 transition-all"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ReviewImportanceCard({ factor, score }) {
+  const info = factorInfo[factor];
+  const Icon = info.icon;
+  const percentage = getPercentage(score, info.maxScore);
+
+  return (
+    <div className="mb-4 w-full rounded-2xl border border-gray-200 bg-white p-5 md:p-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+            <Icon size={20} />
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-800">{info.title}</h3>
+            <p className="mt-1 text-xs text-gray-500">{score} priority points</p>
+          </div>
         </div>
-        <div className="text-sm font-semibold text-gray-400">
-          Based on your answers, Dwellio will weigh localities using this
-          priority profile.
-        </div>
+
+        <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+          {getImportance(percentage)}
+        </span>
       </div>
 
-      <div>
-        {Object.entries(factorScore)
-          .sort((a, b) => b[1] - a[1])
-          .map((o) => {
-            const factor = factorInfo[o[0]];
-
-            return (
-              <ReviewImportanceCard
-                factorScore={o[1]}
-                factorTitle={factor.title}
-                icon={factor.icon}
-                maxScore={factor.maxScore}
-              />
-            );
-          })}
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-200">
+        <div
+          className="h-full rounded-full bg-blue-600 transition-all"
+          style={{ width: `${percentage}%` }}
+        />
       </div>
     </div>
   );
 }
 
-function RecommendationQuizPage() {
+function ReviewScreen({
+  factorScore,
+  setPhase,
+  onRestart,
+  navigate,
+  locationPreference,
+}) {
+  const sortedFactors = Object.entries(factorScore).sort(
+    (a, b) => b[1] - a[1]
+  );
+
+  const locationLabel =
+    locationPreference.scope === "city"
+      ? locationPreference.city
+      : locationPreference.scope === "state"
+        ? locationPreference.state
+        : "Anywhere in India";
+
+  return (
+    <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-5 py-10 md:px-8">
+      <div className="flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-emerald-700">
+        <span>Quiz Complete</span>
+        <Check size={14} />
+      </div>
+
+      <div className="my-5 text-center">
+        <h2 className="text-2xl font-semibold text-gray-900">
+          Here's What Matters Most to You
+        </h2>
+        <p className="mt-2 text-sm text-gray-500">
+          Your preferences will be used to rank localities within your chosen
+          geographic area.
+        </p>
+      </div>
+
+      <div className="mb-6 w-full rounded-xl border border-blue-100 bg-blue-50 p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-blue-900">
+          <MapPin size={17} />
+          Preferred location
+        </div>
+        <p className="mt-1 text-sm text-blue-800">{locationLabel}</p>
+
+        <button
+          type="button"
+          onClick={() => setPhase("location")}
+          className="mt-2 text-sm font-semibold text-blue-700 underline"
+        >
+          Change location
+        </button>
+      </div>
+
+      <div className="w-full">
+        {sortedFactors.map(([factor, score]) => (
+          <ReviewImportanceCard
+            key={factor}
+            factor={factor}
+            score={score}
+          />
+        ))}
+      </div>
+
+      <div className="mt-4 flex w-full flex-wrap justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => setPhase("quiz")}
+          className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          <ArrowLeft size={16} />
+          Edit Answers
+        </button>
+
+        <button
+          type="button"
+          onClick={onRestart}
+          className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          <RefreshCw size={15} />
+          Start Again
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/result", {
+              state: {
+                priorities: factorScore,
+                locationPreference,
+              },
+            })
+          }
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+        >
+          Find My Localities
+          <ArrowRight size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function RecommendationQuizPage() {
+  const navigate = useNavigate();
+
   const [phase, setPhase] = useState("intro");
-  const [factorScore, setFactorScore] = useState({
-    safety: 0,
-    connectivity: 0,
-    healthcare: 0,
-    education: 0,
-    environment: 0,
-    amenities: 0,
-    lifestyle: 0,
-    housing: 0,
-    growth: 0,
-  });
-  const maxFactorScores = {
-    safety: 26,
-    connectivity: 35,
-    healthcare: 25,
-    education: 21,
-    environment: 38,
-    amenities: 45,
-    lifestyle: 39,
-    housing: 21,
-    growth: 20,
-  };
+  const [answersByQuestion, setAnswersByQuestion] = useState({});
+  const [locationPreference, setLocationPreference] = useState(
+    initialLocationPreference
+  );
+
+  const factorScore = useMemo(
+    () => calculateFactorScores(answersByQuestion),
+    [answersByQuestion]
+  );
+
+  function restartQuiz() {
+    setAnswersByQuestion({});
+    setLocationPreference(initialLocationPreference);
+    setPhase("intro");
+  }
 
   return (
     <div>
       {phase === "intro" && <IntroScreen setPhase={setPhase} />}
+
+      {phase === "location" && (
+        <LocationPreferenceScreen
+          preference={locationPreference}
+          setPreference={setLocationPreference}
+          onBack={() => setPhase("intro")}
+          onContinue={() => setPhase("quiz")}
+        />
+      )}
+
       {phase === "quiz" && (
         <QuizScreen
           setPhase={setPhase}
+          answersByQuestion={answersByQuestion}
+          setAnswersByQuestion={setAnswersByQuestion}
           factorScore={factorScore}
-          setFactorScore={setFactorScore}
-          maxFactorScores={maxFactorScores}
         />
       )}
+
       {phase === "review" && (
         <ReviewScreen
-          setPhase={setPhase}
-          maxFactorScores={maxFactorScores}
           factorScore={factorScore}
+          setPhase={setPhase}
+          onRestart={restartQuiz}
+          navigate={navigate}
+          locationPreference={locationPreference}
         />
       )}
     </div>
   );
 }
-
-export default RecommendationQuizPage;
